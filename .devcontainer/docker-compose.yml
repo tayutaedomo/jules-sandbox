@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/usr/src/app
+    ports:
+      - "8000:8000" # Optional: if your app needs to expose a port
+    depends_on:
+      - dynamodb-local
+    environment:
+      - DYNAMODB_HOST=http://dynamodb-local:8000
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_REGION=us-local-1 # Or any preferred region
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8001:8000" # Expose DynamoDB Local on host port 8001 (to avoid conflict if app uses 8000)
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    volumes:
+      - dynamodb_data:/data
+
+volumes:
+  dynamodb_data:
