@@ -1,0 +1,23 @@
+{
+  "name": "Python App with DynamoDB Local",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/usr/src/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.pythonPath": "/usr/local/bin/python",
+        "python.languageServer": "Pylance",
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestEnabled": true // Assuming pytest for potential future tests
+      }
+    }
+  },
+  "postCreateCommand": "echo 'Dev container created successfully. Run src/main.py to test DynamoDB connection.'",
+  "forwardPorts": [8001], // Forward DynamoDB Local port for potential external access if needed
+  "runServices": ["app", "dynamodb-local"]
+}
