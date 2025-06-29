@@ -1,7 +1,10 @@
 import os
+import time # Added for retry logic
 from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, NumberAttribute
 from pynamodb.connection import Connection
+from pynamodb.exceptions import TableError # Added for specific exception handling
+from botocore.exceptions import EndpointConnectionError # Added for specific exception handling
 
 # Read DynamoDB endpoint URL from environment variable
 # Fallback to local endpoint if not set (for direct script execution outside dev container)
@@ -28,13 +31,39 @@ class UserModel(Model):
 def main():
     print(f"Connecting to DynamoDB at: {DYNAMODB_HOST} in region {AWS_REGION}")
 
-    # Create table if it doesn't exist
-    if not UserModel.exists():
-        print("Creating PynamoDBUserTable...")
-        UserModel.create_table(read_capacity_units=1, write_capacity_units=1, wait=True)
-        print("Table created successfully.")
-    else:
-        print("PynamoDBUserTable already exists.")
+    max_retries = 10
+    retry_delay_seconds = 3
+    table_ready = False
+
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempting to check if table exists (attempt {attempt + 1}/{max_retries})...")
+            if not UserModel.exists():
+                print("Table does not exist. Attempting to create PynamoDBUserTable...")
+                UserModel.create_table(read_capacity_units=1, write_capacity_units=1, wait=True)
+                print("Table created successfully.")
+            else:
+                print("PynamoDBUserTable already exists.")
+            table_ready = True
+            break # Exit loop if successful
+        except (EndpointConnectionError, TableError) as e:
+            print(f"Connection/Table error: {e}. Retrying in {retry_delay_seconds} seconds...")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay_seconds)
+            else:
+                print("Max retries reached. Could not connect to DynamoDB or create table.")
+                return # Exit main function if table cannot be confirmed/created
+        except Exception as e: # Catch other potential startup errors
+            print(f"An unexpected error occurred during table check/creation: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay_seconds)
+            else:
+                print("Max retries reached due to unexpected error.")
+                return
+
+    if not table_ready:
+        print("Exiting application as DynamoDB table could not be initialized.")
+        return
 
     # Create a new user
     try:
