@@ -18,6 +18,7 @@ services:
 
   dynamodb-local:
     image: amazon/dynamodb-local:latest
+    user: "root" # Run DynamoDB Local as root to avoid permission issues with the volume
     ports:
       - "8001:8000" # Expose DynamoDB Local on host port 8001 (to avoid conflict if app uses 8000)
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
